@@ -19,13 +19,18 @@
     Step 6: Here I implemented error handling to check if the post request has name and number of a person in the body, and if the name is unique.
     If any of this conditions do not succeed then the response status is 400 bad request.
 
+    Step 7: For this I installed the npm morgan package and use the 'tiny' method as a middleware to log the request information for every type of
+    request made to the server.
+
+    Step 8: Here I used the morgan package to create my own token that logs the request body when a request is made to the server, then I call this
+    token along side other "basic" tokens so it logs the information, to get the request body in a valid format I used JSON.stringify().
+
 */
 
-const { response } = require('express');
 const express = require('express');
-const app = express();
+const morgan = require('morgan');
 
-app.use(express.json());
+const app = express();
 
 let persons = [
     {
@@ -50,8 +55,33 @@ let persons = [
     }
 ];
 
+// MIDDLEWARE
+
+app.use(express.json());
+
+/*const myLoggerMiddleware = (request, response, next) => {
+    console.log('Request method: ', request.method);
+    console.log('Request headers: ', request.headers);
+    console.log('Request body: ', request.body);
+    console.log('-----------------------------');
+    next();
+}
+
+app.use(myLoggerMiddleware);
+
+*/
+
+morgan.token('resJSON', (request, res) => {
+    return JSON.stringify(request.body);
+});
+
+
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :resJSON'));
+
+// ROUTES
+
 app.get('/api/persons', (request, response) => {
-    console.log('PERSONS: ', persons);
+    console.log('Persons: ', persons);
     response.json(persons);
 });
 
@@ -63,14 +93,16 @@ app.get('/info', (request, response) => {
 app.get('/api/persons/:id', (request, response) => {
     const id = request.params.id;
     console.log(`id: ${id}`);
+
     const person = persons.find((p) => {
         return p.id === Number(id);
     });
-    console.log('PERSON: ', person);
 
     if (person) {
+        console.log('Person found: ', person);
         response.json(person);
     } else {
+        console.log('404 not found - person');
         response.status(404).end();
     }
 });
@@ -82,25 +114,25 @@ app.delete('/api/persons/:id', (request, response) => {
     const person = persons.find((p) => {
         return p.id === Number(id);
     });
-    console.log('PERSON: ', person);
 
     if (person) {
+        console.log('Person found: ', person);
         persons = persons.filter(p => p.id !== Number(id));
-        console.log('PERSONS AFTER DELETE: ', persons);
+        console.log('Persons after delete: ', persons);
         response.status(204).end();
     } else {
+        console.log('404 not found - person');
         response.status(404).end();
     }
 });
 
 app.post('/api/persons/', (request, response) => {
     const body = request.body;
-    console.log('REQUEST BODY: ', body);
-    console.log('REQUEST HEADERS: ', request.headers);
 
     if (body.name) {
         if (body.number) {
             if (persons.find(p => p.name.toLowerCase() === body.name.toLowerCase())) {
+                console.log('400 bad request: name must be unique');
                 return response.status(400).json({
                     error: "Name must be unique"
                 })
@@ -110,19 +142,21 @@ app.post('/api/persons/', (request, response) => {
                     name: body.name,
                     number: body.number
                 }
-                console.log('NEW PERSON: ', newPerson);
+                console.log('New person: ', newPerson);
 
                 persons = persons.concat(newPerson);
-                console.log('PERSONS AFTER POST: ', persons);
+                console.log('Persons after post: ', persons);
 
                 response.status(200).end();
             }
         } else {
+            console.log('400 bad request: number missing');
             return response.status(400).json({
                 error: "Number missing"
             })
         }
     } else {
+        console.log('400 bad request: name missing');
         return response.status(400).json({
             error: "Name missing"
         })
