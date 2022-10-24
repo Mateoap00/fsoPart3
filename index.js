@@ -66,6 +66,7 @@ let persons = [
 
 app.use(express.json());
 app.use(cors());
+app.use(express.static('build'));
 
 /*const myLoggerMiddleware = (request, response, next) => {
     console.log('Request method: ', request.method);
