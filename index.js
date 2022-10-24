@@ -28,8 +28,9 @@
     Step 9: I implemented the phonebook backend to work with the frontend developed in part 2, I changed the url in persons service and added a proxy
     to fetch the data from localhost:3001, also I change the http post request response to send the new persons added in json format.
 
-    Step 10: I'm using Railways to deploy the project to the internet, creating a production build of the frontend in the root of this project and
-    then committing the changes to the github repo so Railways updates the deployment automatically.
+    Step 10 and 11: I'm using Railway to deploy the project to the internet, creating a production build of the frontend in the root of this project and
+    then committing the changes to the github repo so Railways updates the deployment automatically. The app should be live at https://fsopart3-production.up.railway.app/
+    unless the free monthly charge or hours for my account were consumed in Railway.
 
 */
 
