@@ -25,10 +25,17 @@
     Step 8: Here I used the morgan package to create my own token that logs the request body when a request is made to the server, then I call this
     token along side other "basic" tokens so it logs the information, to get the request body in a valid format I used JSON.stringify().
 
+    Step 9: I implemented the phonebook backend to work with the frontend developed in part 2, I changed the url in persons service and added a proxy
+    to fetch the data from localhost:3001, also I change the http post request response to send the new persons added in json format.
+
+    Step 10: I'm using Railways to deploy the project to the internet, creating a production build of the frontend in the root of this project and
+    then committing the changes to the github repo so Railways updates the deployment automatically.
+
 */
 
 const express = require('express');
 const morgan = require('morgan');
+const cors = require('cors');
 
 const app = express();
 
@@ -58,6 +65,7 @@ let persons = [
 // MIDDLEWARE
 
 app.use(express.json());
+app.use(cors());
 
 /*const myLoggerMiddleware = (request, response, next) => {
     console.log('Request method: ', request.method);
@@ -147,7 +155,7 @@ app.post('/api/persons/', (request, response) => {
                 persons = persons.concat(newPerson);
                 console.log('Persons after post: ', persons);
 
-                response.status(200).end();
+                response.status(200).json(newPerson);
             }
         } else {
             console.log('400 bad request: number missing');
