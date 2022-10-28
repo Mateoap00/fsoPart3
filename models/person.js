@@ -4,6 +4,9 @@
 
     Step 13: Here I implemented the MongoDB Phonebook database connection into it's own module (models/person.js) so it can get exported in the index.js file and used
     to fetch the db data.
+
+    Step 14: For this step I changed the post request in index.js to save new persons registers in the phonebook database. For the moment it doesn't check if there's a
+    person with the same name already in the phonebook.
 */
 
 const mongoose = require('mongoose');
