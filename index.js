@@ -33,10 +33,12 @@
     unless the free monthly charge or hours for my account were consumed in Railway.
 
 */
-
+require('dotenv').config();
 const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
+const Person = require('./models/person');
+const { default: mongoose } = require('mongoose');
 
 const app = express();
 
@@ -91,8 +93,14 @@ app.use(morgan(':method :url :status :res[content-length] - :response-time ms :r
 // ROUTES
 
 app.get('/api/persons', (request, response) => {
-    console.log('Persons: ', persons);
-    response.json(persons);
+    Person.find({})
+        .then((people) => {
+            console.log('Persons: ', people);
+            response.json(people);
+        }).catch((error) => {
+            console.log(error);
+        });
+
 });
 
 app.get('/info', (request, response) => {
@@ -101,20 +109,15 @@ app.get('/info', (request, response) => {
 });
 
 app.get('/api/persons/:id', (request, response) => {
-    const id = request.params.id;
-    console.log(`id: ${id}`);
 
-    const person = persons.find((p) => {
-        return p.id === Number(id);
-    });
-
-    if (person) {
-        console.log('Person found: ', person);
-        response.json(person);
-    } else {
-        console.log('404 not found - person');
-        response.status(404).end();
-    }
+    Person.findById(request.params.id)
+        .then((person) => {
+            console.log('Person found: ', person);
+            response.json(person);
+        }).catch((error) => {
+            console.log('404 not found - person');
+            response.status(404).end();
+        });
 });
 
 app.delete('/api/persons/:id', (request, response) => {
@@ -139,42 +142,35 @@ app.delete('/api/persons/:id', (request, response) => {
 app.post('/api/persons/', (request, response) => {
     const body = request.body;
 
-    if (body.name) {
-        if (body.number) {
-            if (persons.find(p => p.name.toLowerCase() === body.name.toLowerCase())) {
-                console.log('400 bad request: name must be unique');
-                return response.status(400).json({
-                    error: "Name must be unique"
-                })
-            } else {
-                const newPerson = {
-                    id: Math.floor(Math.random() * (10000) + 1),
-                    name: body.name,
-                    number: body.number
-                }
-                console.log('New person: ', newPerson);
-
-                persons = persons.concat(newPerson);
-                console.log('Persons after post: ', persons);
-
-                response.status(200).json(newPerson);
-            }
-        } else {
-            console.log('400 bad request: number missing');
-            return response.status(400).json({
-                error: "Number missing"
-            })
-        }
-    } else {
-        console.log('400 bad request: name missing');
+    if (!body.name) {
+        console.log('400 bad request: name must be unique');
         return response.status(400).json({
             error: "Name missing"
-        })
+        });
+    } else if (!body.number) {
+        console.log('400 bad request: number missing');
+        return response.status(400).json({
+            error: "Number missing"
+        });
+    } else {
+        const newPerson = new Person({
+            name: body.name,
+            number: body.number
+        });
+
+        newPerson.save()
+            .then((newPerson) => {
+                console.log('New person registered: ', newPerson);
+                response.json(newPerson);
+            }).catch((error) => {
+                console.log('Error registering new person');
+                response.status(400).end();
+            });
     }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT;
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`)
+    console.log(`Server running on port ${PORT}`);
 });
