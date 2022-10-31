@@ -32,6 +32,16 @@
     then committing the changes to the github repo so Railways updates the deployment automatically. The app should be live at https://fsopart3-production.up.railway.app/
     unless the free monthly charge or hours for my account were consumed in Railway.
 
+    Step 15: Added the delete person functionality to the mongo database and verified with the front end app.
+
+    Step 16: In this step I moved the error handling of the requests into it's own middleware that gets loaded with app.use.
+
+    Step 17*: Here I implemented a put request handler to update the register of a person if the front end sends a request of a person that is already registered in
+    the phonebook.
+
+    Step 18*: In this step I modified the get /info request to show the current real number of people registered in the database of the phonebook, also I added error handling
+    to all the request hanlders, but the handler middleware just shows information if the error is a Casterror type, if not then the default error handler of express is called. 
+
 */
 require('dotenv').config();
 const express = require('express');
@@ -42,46 +52,11 @@ const { default: mongoose } = require('mongoose');
 
 const app = express();
 
-let persons = [
-    {
-        id: 1,
-        name: "Arto Hellas",
-        number: "040-123456"
-    },
-    {
-        id: 2,
-        name: "Ada Lovelace",
-        number: "39-44-5323523"
-    },
-    {
-        id: 3,
-        name: "Dan Abramov",
-        number: "12-43-234345"
-    },
-    {
-        id: 4,
-        name: "Mary Poppendieck",
-        number: "39-23-6423122"
-    }
-];
-
 // MIDDLEWARE
 
 app.use(express.json());
 app.use(cors());
 app.use(express.static('build'));
-
-/*const myLoggerMiddleware = (request, response, next) => {
-    console.log('Request method: ', request.method);
-    console.log('Request headers: ', request.headers);
-    console.log('Request body: ', request.body);
-    console.log('-----------------------------');
-    next();
-}
-
-app.use(myLoggerMiddleware);
-
-*/
 
 morgan.token('resJSON', (request, res) => {
     return JSON.stringify(request.body);
@@ -92,58 +67,52 @@ app.use(morgan(':method :url :status :res[content-length] - :response-time ms :r
 
 // ROUTES
 
-app.get('/api/persons', (request, response) => {
+app.get('/api/persons', (request, response, next) => {
     Person.find({})
         .then((people) => {
             console.log('Persons: ', people);
             response.json(people);
-        }).catch((error) => {
-            console.log(error);
-        });
+        }).catch(error => next(error));
 
 });
 
-app.get('/info', (request, response) => {
-    const personsIn = persons.length;
-    response.send(`<p>Phonebook has the information of ${personsIn} people</p>\n${new Date()}`);
+app.get('/info', (request, response, next) => {
+    Person.find({})
+        .then((people) => {
+            const peopleLength = people.length;
+            response.send(`<p>Phonebook has the information of ${peopleLength} people</p>\n${new Date()}`);
+        }).catch(error => next(error));
 });
 
-app.get('/api/persons/:id', (request, response) => {
+app.get('/api/persons/:id', (request, response, next) => {
 
     Person.findById(request.params.id)
         .then((person) => {
-            console.log('Person found: ', person);
-            response.json(person);
-        }).catch((error) => {
-            console.log('404 not found - person');
-            response.status(404).end();
-        });
+            if (person) {
+                console.log('Person found: ', person);
+                response.json(person);
+            } else {
+                console.log('404 person not found');
+                response.status(404).json({ error: 'Person not found' });
+            }
+        }).catch(error => next(error));
 });
 
-app.delete('/api/persons/:id', (request, response) => {
+app.delete('/api/persons/:id', (request, response, next) => {
     const id = request.params.id;
-    console.log(`id: ${id}`);
 
-    const person = persons.find((p) => {
-        return p.id === Number(id);
-    });
-
-    if (person) {
-        console.log('Person found: ', person);
-        persons = persons.filter(p => p.id !== Number(id));
-        console.log('Persons after delete: ', persons);
-        response.status(204).end();
-    } else {
-        console.log('404 not found - person');
-        response.status(404).end();
-    }
+    Person.findByIdAndRemove(id)
+        .then((result) => {
+            console.log('Deleted successfully!');
+            response.status(204).end();
+        }).catch(error => next(error));
 });
 
-app.post('/api/persons/', (request, response) => {
+app.post('/api/persons/', (request, response, next) => {
     const body = request.body;
 
     if (!body.name) {
-        console.log('400 bad request: name must be unique');
+        console.log('400 bad request: name missing');
         return response.status(400).json({
             error: "Name missing"
         });
@@ -162,12 +131,44 @@ app.post('/api/persons/', (request, response) => {
             .then((newPerson) => {
                 console.log('New person registered: ', newPerson);
                 response.json(newPerson);
-            }).catch((error) => {
-                console.log('Error registering new person');
-                response.status(400).end();
-            });
+            }).catch(error => next(error));
     }
 });
+
+app.put('/api/persons/:id', (request, response, next) => {
+    const id = request.params.id;
+    const person = {
+        name: request.body.name,
+        number: request.body.number
+    }
+
+    Person.findByIdAndUpdate(id, person, { new: true })
+        .then(updatedPerson => {
+            console.log('Updated person: ', updatedPerson);
+            response.json(updatedPerson);
+        }).catch(error => next(error));
+});
+
+// AFTER ROUTES MIDDLEWARE
+
+const unknownEndpointMiddleware = (request, response) => {
+    console.log('404 not found - unknown endpoint');
+    response.status(404).send({ error: 'unknown endpoint' })
+}
+
+const errorHandler = (error, request, response, next) => {
+
+    console.log(error.message);
+
+    if (error.name === 'CastError') {
+        return response.status(400).send({ error: 'malformatted id' });
+    }
+
+    next(error);
+}
+
+app.use(unknownEndpointMiddleware);
+app.use(errorHandler);
 
 const PORT = process.env.PORT;
 
