@@ -40,8 +40,20 @@
     the phonebook.
 
     Step 18*: In this step I modified the get /info request to show the current real number of people registered in the database of the phonebook, also I added error handling
-    to all the request hanlders, but the handler middleware just shows information if the error is a Casterror type, if not then the default error handler of express is called. 
+    to all the request handlers, but the handler middleware just shows information if the error is a Casterror type, if not then the default error handler of express is called. 
 
+    Step 19*: In this step I added validators for the Person schema collection in mongodb, so it requires that the name of the person is at least 3 characters and the number exists.
+    If not then a error get's thrown to the handler middleware that has a new option "ValidationError" for errors of this type.
+    The validators are called when post and update requests are made. In the react front end I added more error messages to inform about the exact error.
+    
+    Step 20*: I added custom validators in the person schema that verifies if a phone number is valid if not then saving that phone will throw a error.
+    For this I added a 1st validator to check that the number contains only digits or the '-' character, and a 2nd validator to check if it has the '-'
+    then the first part before - has to be at least 2 or 3 numbers. Also in the schema definition asks that the minimum length for the number is 8.
+    A extra validation is made if a http post request sends data with a name that's already register, then it throws a error, for this I defined that
+    the name field is unique in the schema (this validation doesn't generates problem with the put request handler).
+
+    Step 21*: I uploaded the latest version of the phonebook app with all the new changes and the new production build of the frontend in railway. 
+    The app should be live at https://fsopart3-production.up.railway.app/ unless the free monthly charge or hours for my account were consumed in Railway.
 */
 require('dotenv').config();
 const express = require('express');
@@ -111,28 +123,17 @@ app.delete('/api/persons/:id', (request, response, next) => {
 app.post('/api/persons/', (request, response, next) => {
     const body = request.body;
 
-    if (!body.name) {
-        console.log('400 bad request: name missing');
-        return response.status(400).json({
-            error: "Name missing"
-        });
-    } else if (!body.number) {
-        console.log('400 bad request: number missing');
-        return response.status(400).json({
-            error: "Number missing"
-        });
-    } else {
-        const newPerson = new Person({
-            name: body.name,
-            number: body.number
-        });
+    const newPerson = new Person({
+        name: body.name,
+        number: body.number
+    });
 
-        newPerson.save()
-            .then((newPerson) => {
-                console.log('New person registered: ', newPerson);
-                response.json(newPerson);
-            }).catch(error => next(error));
-    }
+    newPerson.save()
+        .then((newPerson) => {
+            console.log('New person registered: ', newPerson);
+            response.json(newPerson);
+        }).catch(error => next(error));
+
 });
 
 app.put('/api/persons/:id', (request, response, next) => {
@@ -142,7 +143,8 @@ app.put('/api/persons/:id', (request, response, next) => {
         number: request.body.number
     }
 
-    Person.findByIdAndUpdate(id, person, { new: true })
+    const opts = { new: true, runValidators: true, context: 'query' };
+    Person.findByIdAndUpdate(id, person, opts)
         .then(updatedPerson => {
             console.log('Updated person: ', updatedPerson);
             response.json(updatedPerson);
@@ -153,7 +155,7 @@ app.put('/api/persons/:id', (request, response, next) => {
 
 const unknownEndpointMiddleware = (request, response) => {
     console.log('404 not found - unknown endpoint');
-    response.status(404).send({ error: 'unknown endpoint' })
+    response.status(404).send({ error: 'unknown endpoint' });
 }
 
 const errorHandler = (error, request, response, next) => {
@@ -162,6 +164,8 @@ const errorHandler = (error, request, response, next) => {
 
     if (error.name === 'CastError') {
         return response.status(400).send({ error: 'malformatted id' });
+    } else if (error.name === 'ValidationError') {
+        return response.status(400).send({ error: error.message })
     }
 
     next(error);

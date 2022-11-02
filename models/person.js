@@ -22,9 +22,45 @@ mongoose.connect(uri)
         console.log('Error connecting to MongoDB!');
     })
 
+const validateParts = (number) => {
+    numberParts = number.split('-');
+    console.log(numberParts);
+    if (numberParts.length === 2 || numberParts.length === 1) {
+        if (numberParts.length === 1) {
+            return true
+        } else {
+            if (numberParts[0].length === 2 || numberParts[0].length === 3) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    } else {
+        return false;
+    }
+}
+
+function onlyNumbers(number) {
+    return /^(\d+-)*(\d+)$/.test(number);
+}
+
+const many = [
+    { validator: onlyNumbers, msg: 'The phone number must contain only digits or -.' },
+    { validator: validateParts, msg: 'The phone if divided with - must have two or three numbers in the first part.' }
+]
 const personSchema = new mongoose.Schema({
-    name: String,
-    number: String
+    name: {
+        type: String,
+        minLength: 3,
+        unique: true,
+        required: true
+    },
+    number: {
+        type: String,
+        minLength: 8,
+        validate: many,
+        required: true
+    }
 });
 
 personSchema.set('toJSON', {
