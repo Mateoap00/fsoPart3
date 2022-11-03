@@ -11,23 +11,25 @@
 
 const mongoose = require('mongoose');
 
+// eslint-disable-next-line no-undef
 const uri = process.env.MONGODB_URI;
 
 console.log('Connecting to MongoDB...');
 
 mongoose.connect(uri)
+    // eslint-disable-next-line no-unused-vars
     .then((result) => {
         console.log('Connected successfully!');
     }).catch((error) => {
-        console.log('Error connecting to MongoDB!');
-    })
+        console.log('Error connecting to MongoDB: ', error);
+    });
 
 const validateParts = (number) => {
-    numberParts = number.split('-');
+    const numberParts = number.split('-');
     console.log(numberParts);
     if (numberParts.length === 2 || numberParts.length === 1) {
         if (numberParts.length === 1) {
-            return true
+            return true;
         } else {
             if (numberParts[0].length === 2 || numberParts[0].length === 3) {
                 return true;
@@ -38,7 +40,7 @@ const validateParts = (number) => {
     } else {
         return false;
     }
-}
+};
 
 function onlyNumbers(number) {
     return /^(\d+-)*(\d+)$/.test(number);
@@ -47,7 +49,8 @@ function onlyNumbers(number) {
 const many = [
     { validator: onlyNumbers, msg: 'The phone number must contain only digits or -.' },
     { validator: validateParts, msg: 'The phone if divided with - must have two or three numbers in the first part.' }
-]
+];
+
 const personSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -65,9 +68,9 @@ const personSchema = new mongoose.Schema({
 
 personSchema.set('toJSON', {
     transform: (document, returnedObject) => {
-        returnedObject.id = returnedObject._id.toString()
-        delete returnedObject._id
-        delete returnedObject.__v
+        returnedObject.id = returnedObject._id.toString();
+        delete returnedObject._id;
+        delete returnedObject.__v;
     }
 });
 
