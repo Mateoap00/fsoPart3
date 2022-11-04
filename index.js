@@ -54,6 +54,9 @@
 
     Step 21*: I uploaded the latest version of the phonebook app with all the new changes and the new production build of the frontend in railway.
     The app should be live at https://fsopart3-production.up.railway.app/ unless the free monthly charge or hours for my account were consumed in Railway.
+
+    Step 22: I added eslint to the project, and fixed formatting errors and ignored some that I think are important to keep like the unused warning
+    in some of the http request handlers.
 */
 require('dotenv').config();
 const express = require('express');
